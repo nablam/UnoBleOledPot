@@ -1,13 +1,23 @@
- #define USE_U8x8
+﻿ #define USE_U8x8
  #define USE_Buttons
-#define USE_BLE
+#define USE_Pot
+#define USE_Servo
+//#define USE_BLE
 //#define USE_OLED
 //#define  USE_U8G2_for_arduino
 //#define  USE_U8G2
-volatile int teee  ;
+ int teee  ;
 #ifdef  USE_U8x8
 #include <Arduino.h>
 #include <U8x8lib.h>
+
+
+ char str_01[8];
+ char str_02[8];
+ char str_03[8];
+ char str_04[8];
+ //char str[8];
+
 
 // Please UNCOMMENT one of the contructor lines below
 // U8x8 Contructor List 
@@ -39,19 +49,52 @@ void setup_uu8x8(void)
 void loop_u8x8(void)
     {
    //String str = teee + "";
-   char str[8];
-   itoa(teee ,str, 10);
+   char str_01[8];
+   itoa(teee ,str_01, 10);
     
 
   //  Serial.println(teee);
   //  Serial.println(str);
     u8x8.setFont(u8x8_font_chroma48medium8_r);
-    u8x8.drawString(0, 1, "YOYOY!");
-    u8x8.drawString(0, 2, str);
+    u8x8.drawString(0, 1, "YOYOYv2!");
+    u8x8.drawString(4, 2, str_01);
     
     u8x8.refreshDisplay();    // only required for SSD1606/7  
     //delay(2000);
     }
+
+
+void loop_u8x8_Pot(int argVal_1, int argVal_2, int argVal_3, int argVal_4 )
+    {
+   //String str = teee + "";
+   
+   // itoa(argVal_1, str_01, 10);
+   // itoa(argVal_2, str_02, 10);
+   // itoa(argVal_3, str_03, 10);
+   // itoa(argVal_4, str_04, 10);
+
+    u8x8.setFont(u8x8_font_chroma48medium8_r);
+    //u8x8.drawString(0, 1, "p="); u8x8.drawString(0, 3, str_01); u8x8.drawString(0, 6, str_02);
+    //u8x8.drawString(0, 2, str_03); u8x8.drawString(0, 6, str_04);
+
+    // COLUMN, ROW
+
+    //row 0
+   // u8x8.drawString(0, 0, "p=");
+    sprintf(str_01, "%3d", argVal_1);
+    sprintf(str_02, "%3d", argVal_2);
+    sprintf(str_03, "%3d", argVal_3);
+    sprintf(str_04, "%3d", argVal_4);
+    u8x8.drawString(0, 0, str_01); u8x8.drawString(10, 0, str_02);
+    //row 1
+    u8x8.drawString(0, 1, str_03); u8x8.drawString(10, 1, str_04);
+
+    u8x8.refreshDisplay();    // only required for SSD1606/7  
+
+   // memset(0, *str, sizeof(str));
+    //delay(2000);
+    }
+
 #endif //  USE_U8x8
 
 
@@ -76,9 +119,9 @@ int buttonStateB;
 int lastButtonStateA = LOW;
 int lastButtonStateB = LOW;
 
-
-int potPin_lr = A0;
-int potPin_ud = A1;
+bool OnOff_1 = false;
+bool OnOff_2 = false;
+ 
 
 unsigned long lastDebounceTimeA = 0;  // the last time the output pin was toggled
 unsigned long debounceDelayA = 50;    // the debounce time; increase if the output flickers
@@ -102,7 +145,7 @@ void ButtonALedA() {
             // only toggle the LED if the new button state is HIGH
             if (buttonStateA == HIGH) {
                 ledStateA = !ledStateA;
-                teee--;
+                 
                 }
             }
         }
@@ -120,7 +163,7 @@ void ButtonBLedB() {
             buttonStateB = readingB;
             if (buttonStateB == HIGH) {
                 ledStateB = !ledStateB;
-                teee++;
+                 
                 }
             }
         }
@@ -168,7 +211,7 @@ void loopU8g2() {
     u8g2_for_adafruit_gfx.setCursor(0, 20);                // start writing at this position
     u8g2_for_adafruit_gfx.print("Hello World");
     u8g2_for_adafruit_gfx.setCursor(0, 40);                // start writing at this position
-    u8g2_for_adafruit_gfx.print("Umlaut ���");            // UTF-8 string with german umlaut chars
+    u8g2_for_adafruit_gfx.print("Umlaut ÄÖÜ");            // UTF-8 string with german umlaut chars
     display.display();                                    // make everything visible
     //delay(2000);
     }
@@ -1177,13 +1220,64 @@ void loop_U8G2(void)
     }
 #endif
 
+#ifdef USE_Servo
+
+
+#pragma region servo
+#include <Servo.h>
+
+    Servo myservo;
+    const int ServoPin = 10;
+    
+    int someint = LOW;
+
  
+    unsigned long somelong = 50;
+
+    void ServoG0To(int argAngle) {
+        if(ledStateA==HIGH)
+        myservo.write(argAngle);
+        }
+
+  
+#pragma endregion
+#endif // USE_Servo
+
+#ifdef USE_Pot
+    int potPin_lr = A0;
+    int potPin_ud = A1;
+
+    int ValPot_lr;
+    int ValPot_ud;
+
+    int myangle = 0;;
+
+    int radToDeg(float rad) { return rad * (180 / M_PI); }
+    int vectorAngle(float x, float y) {
+        if (x == 0) // special cases
+            return (y > 0) ? 90
+            : (y == 0) ? 0
+            : 270;
+        else if (y == 0) // special cases
+            return (x >= 0) ? 0
+            : 180;
+        int ret = radToDeg(atanf((float)y / x));
+        if (x < 0 && y < 0) // quadrant Ⅲ
+            ret = 180 + ret;
+        else if (x < 0) // quadrant Ⅱ
+            ret = 180 + ret; // it actually substracts
+        else if (y < 0) // quadrant Ⅳ
+            ret = 270 + (90 + ret); // it actually substracts
+        return ret;
+        }
+
+#endif
 
    
 
 void setup() {
     Serial.begin(9600);
-    teee = 100;
+    teee = 0;
 #ifdef USE_Buttons
     pinMode(buttonPinA, INPUT);
     pinMode(buttonPinB, INPUT);
@@ -1239,6 +1333,16 @@ void setup() {
 #ifdef  USE_U8x8
     setup_uu8x8();
 #endif //  USE_U8x8
+
+#ifdef USE_Servo
+    myservo.attach(ServoPin);
+
+#endif
+
+#ifdef USE_Pot
+    pinMode(potPin_lr, INPUT);
+    pinMode(potPin_ud, INPUT);
+#endif
 
 
 
@@ -1315,9 +1419,13 @@ void loop() {
         loop_U8G2();
     #endif
         
-        if (millis() % 1000 == 0) {
+        if (millis() % 400 == 0) {
         #ifdef  USE_U8x8
-            loop_u8x8();
+           // loop_u8x8();
+            //if (ledStateB == LOW) {
+                myangle = vectorAngle(ValPot_lr, ValPot_ud);
+               // }
+            loop_u8x8_Pot(ValPot_lr, ValPot_ud, myangle , 456);
         #endif //  USE_U8x8
             }
         else
@@ -1327,5 +1435,48 @@ void loop() {
             loopAltSoft();
         #endif // USE_BLE
 
+        #ifdef USE_Pot
+            ValPot_lr = analogRead(potPin_lr);
+        /*    if (ledStateB == HIGH) {
+                ValPot_lr = map(ValPot_lr, 10, 1023, 0, 90);
+                }
+            else
+                {
+                  ValPot_lr = map(ValPot_lr, 10, 1023, 0, 100);
+                }*/
+            ValPot_lr = map(ValPot_lr, 10, 1023, -1.0, 1.0);
+
+         /*   ValPot_ud = analogRead(potPin_ud);
+            if (ledStateB == HIGH) {
+                ValPot_ud = map(ValPot_ud, 10, 1023, 0, 270);
+                }
+            else
+                {
+                ValPot_ud = map(ValPot_ud, 10, 1023, 0, 100);
+                }*/
+            ValPot_ud = map(ValPot_ud, 10, 1023, -1.0, 1.0);
+
+           // if (ledStateB == HIGH) {
+             /*   if (ValPot_lr < 40) { ValPot_lr = 0; }
+                else if (ValPot_lr >= 40 && ValPot_lr < 60) { ValPot_lr = -1; }
+                else
+                    if (ValPot_lr >= 60) { ValPot_lr = 1; }
+
+                if (ValPot_ud < 40) { ValPot_ud = -1; }
+                else if (ValPot_ud >= 40 && ValPot_ud < 60) { ValPot_ud =0; }
+                else
+                    if (ValPot_ud >= 60) {  ValPot_ud = 1;  }*/
+          
+
+
+
+            #ifdef USE_Servo
+            //loop_u8x8_Pot(ValPot_lr, ValPot_ud, 123, 456);
+            ServoG0To(ValPot_lr);
+            #endif
+
+
+
+        #endif
             }
     }
