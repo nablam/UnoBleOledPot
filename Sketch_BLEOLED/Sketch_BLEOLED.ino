@@ -12,10 +12,11 @@
 #include <U8x8lib.h>
 
 
- char str_01[8];
- char str_02[8];
- char str_03[8];
- char str_04[8];
+ char str_01[4];
+ char str_02[4];
+ char str_03[4];
+ char str_04[4];
+ char str_05[4];
  //char str[8];
 
 
@@ -64,7 +65,7 @@ void loop_u8x8(void)
     }
 
 
-void loop_u8x8_Pot(int argVal_1, int argVal_2, int argVal_3, int argVal_4 )
+void loop_u8x8_Pot(int argVal_1, int argVal_2, int argVal_3, int argVal_4 , int argangle)
     {
    //String str = teee + "";
    
@@ -85,10 +86,13 @@ void loop_u8x8_Pot(int argVal_1, int argVal_2, int argVal_3, int argVal_4 )
     sprintf(str_02, "%3d", argVal_2);
     sprintf(str_03, "%3d", argVal_3);
     sprintf(str_04, "%3d", argVal_4);
+    sprintf(str_05, "%3d", argangle);
+    //Row 0
     u8x8.drawString(0, 0, str_01); u8x8.drawString(10, 0, str_02);
     //row 1
     u8x8.drawString(0, 1, str_03); u8x8.drawString(10, 1, str_04);
-
+    //row 2
+    u8x8.drawString(0, 2, str_05);
     u8x8.refreshDisplay();    // only required for SSD1606/7  
 
    // memset(0, *str, sizeof(str));
@@ -1246,14 +1250,22 @@ void loop_U8G2(void)
 #ifdef USE_Pot
     int potPin_lr = A0;
     int potPin_ud = A1;
+  const  int midPot_lr=501;
+  const  int midPot_ud=501;
+  const int deadzone = 10;
+
 
     int ValPot_lr;
     int ValPot_ud;
+    float ScaledPot_lr;
+    float ScaledPot_ud;
+    int XaxisValue;
+    int YaxisValue;
 
     int myangle = 0;;
 
     int radToDeg(float rad) { return rad * (180 / M_PI); }
-    int vectorAngle(float x, float y) {
+    int vectorAngle(int x, int y) {
         if (x == 0) // special cases
             return (y > 0) ? 90
             : (y == 0) ? 0
@@ -1423,9 +1435,11 @@ void loop() {
         #ifdef  USE_U8x8
            // loop_u8x8();
             //if (ledStateB == LOW) {
-                myangle = vectorAngle(ValPot_lr, ValPot_ud);
+                myangle = vectorAngle(XaxisValue, YaxisValue);
+                myangle = constrain(myangle, 0, 270);
+                
                // }
-            loop_u8x8_Pot(ValPot_lr, ValPot_ud, myangle , 456);
+            loop_u8x8_Pot(ValPot_lr, ValPot_ud, ScaledPot_lr, ScaledPot_ud, myangle);
         #endif //  USE_U8x8
             }
         else
@@ -1437,24 +1451,27 @@ void loop() {
 
         #ifdef USE_Pot
             ValPot_lr = analogRead(potPin_lr);
-        /*    if (ledStateB == HIGH) {
-                ValPot_lr = map(ValPot_lr, 10, 1023, 0, 90);
-                }
-            else
-                {
-                  ValPot_lr = map(ValPot_lr, 10, 1023, 0, 100);
-                }*/
-            ValPot_lr = map(ValPot_lr, 10, 1023, -1.0, 1.0);
+            ValPot_ud = analogRead(potPin_ud);
+         
+            if (ValPot_lr > (midPot_lr - deadzone) && ValPot_lr < (midPot_lr + deadzone)) { ValPot_lr = 500; }
+            if (ValPot_ud > (midPot_ud - deadzone) && ValPot_ud < (midPot_ud + deadzone)) { ValPot_ud = 500; }
 
-         /*   ValPot_ud = analogRead(potPin_ud);
-            if (ledStateB == HIGH) {
-                ValPot_ud = map(ValPot_ud, 10, 1023, 0, 270);
-                }
+            ScaledPot_lr = map(ValPot_lr, 0, 1023, 0, 512);
+ 
+            ScaledPot_ud = map(ValPot_ud, 0, 1023, 512, 0);
+
+            if (ScaledPot_lr > 240 && ScaledPot_lr < 247)XaxisValue = 0;
             else
-                {
-                ValPot_ud = map(ValPot_ud, 10, 1023, 0, 100);
-                }*/
-            ValPot_ud = map(ValPot_ud, 10, 1023, -1.0, 1.0);
+                if (ScaledPot_lr <= 240) XaxisValue = -240 + ScaledPot_lr;
+                else 
+                    if (ScaledPot_lr >=247 ) XaxisValue = -247 + ScaledPot_lr;
+
+
+            if (ScaledPot_ud > 240 && ScaledPot_ud < 270)YaxisValue = 0;
+            else
+                if (ScaledPot_ud <= 240) YaxisValue = -240 + ScaledPot_ud;
+                else
+                    if (ScaledPot_ud >= 270) YaxisValue = -270 + ScaledPot_ud;
 
            // if (ledStateB == HIGH) {
              /*   if (ValPot_lr < 40) { ValPot_lr = 0; }
@@ -1472,7 +1489,7 @@ void loop() {
 
             #ifdef USE_Servo
             //loop_u8x8_Pot(ValPot_lr, ValPot_ud, 123, 456);
-            ServoG0To(ValPot_lr);
+            ServoG0To(myangle);
             #endif
 
 
